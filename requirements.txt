@@ -1,0 +1,2 @@
+Nasdaq-Data-Link
+yfinance
