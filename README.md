@@ -47,6 +47,7 @@ To define the strategy, you can:
 
 - [Binance Futures Trading Bot](https://github.com/erfaniaa/binance-futures-trading-bot)
 - [Binance Spot Trading Bot](https://github.com/smzerehpoush/binance-spot-trading-bot)
+- [Crypto Trading Strategy Backtester](https://github.com/Erfaniaa/crypto-trading-strategy-backtester)
 
 ## Credits
 
