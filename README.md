@@ -21,7 +21,7 @@ This will generate train set and test set for you.
 
 ## Config
 
-To define the strategy, you can:
+For the configuration, you can:
 
 - Change `config.py` constants.
 - Define new indicators in `indicators.py`.
