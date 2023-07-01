@@ -118,30 +118,6 @@ def get_target_quote_list(quote, column_name, start_time, end_time, forecast_day
 	return target_list
 
 
-def get_flipped_target_quote_list(quote, column_name, start_time, end_time, forecast_days, number_of_candles, use_wma_for_forecast_days):
-	df = nasdaqdatalink.get(quote, start_date=start_time, end_date=end_time)
-	df = df.reset_index()
-	df_flipped = df[::-1]
-	target_list = []
-	rev_index = 0
-	last_close_prices = []
-	for index, row in df_flipped.iterrows():
-		if rev_index >= number_of_candles:
-			if use_wma_for_forecast_days:
-				if float(row[column_name]) >= indicators.get_wma(last_close_prices[-forecast_days:]):
-					target_list.append(1)
-				else:
-					target_list.append(0)
-			else:
-				if float(row[column_name]) >= last_close_prices[-forecast_days]:
-					target_list.append(1)
-				else:
-					target_list.append(0)
-		last_close_prices.append(float(row[column_name]))
-		rev_index += 1
-	return target_list
-
-
 def concat_no_target_dataset_with_targets_list(no_target_dataset, targets_list):
 	dataset = no_target_dataset.copy()
 	for i in range(min(len(dataset), len(targets_list))):
@@ -212,15 +188,6 @@ def save_dataset_to_file(dataset_train, dataset_test, dataset_pred, train_csv_fi
 	print("_" * 80)
 
 
-def flip_all_quotes_values_list(all_quotes_values_list):
-	ret = []
-	for quote_values in all_quotes_values_list:
-		quote_values_new = quote_values.copy()
-		quote_values_new.reverse()
-		ret.append(quote_values_new)
-	return ret
-
-
 def concat_datasets(dataset1, dataset2):
 	ret = []
 	for row in dataset1:
@@ -230,7 +197,15 @@ def concat_datasets(dataset1, dataset2):
 	return ret
 
 
-def generate_dataset(quotes_list, target_quote_with_source, start_time, end_time, forecast_days, number_of_candles, train_csv_file_path, test_csv_file_path, pred_csv_file_path, csv_delimiter, test_set_size_ratio, sma_lengths_list, apply_noise_augmentation, augmentation_noise_sigma, train_dataset_new_size_coefficient, apply_flip_augmentation, use_wma_for_forecast_days):
+def remove_intersected_rows_in_train_dataset(dataset_train, forecast_days):
+	ret = []
+	for i in range(len(dataset_train)):
+		if i % forecast_days == 0:
+			ret.append(dataset_train[i])
+	return ret
+
+
+def generate_dataset(quotes_list, target_quote_with_source, start_time, end_time, forecast_days, number_of_candles, train_csv_file_path, test_csv_file_path, pred_csv_file_path, csv_delimiter, test_set_size_ratio, sma_lengths_list, apply_noise_augmentation, augmentation_noise_sigma, train_dataset_new_size_coefficient, use_wma_for_forecast_days):
 	all_quotes_values_list = get_values_for_quotes_list(quotes_list, start_time, end_time, forecast_days)
 	no_target_dataset = generate_no_target_dataset_from_quotes_values_list(all_quotes_values_list, number_of_candles, sma_lengths_list)
 	dataset_pred = no_target_dataset.copy()[-10:]
@@ -238,18 +213,8 @@ def generate_dataset(quotes_list, target_quote_with_source, start_time, end_time
 	target_quote_list = get_target_quote_list(target_quote_with_source[0], target_quote_with_source[1], start_time, end_time, forecast_days, number_of_candles, use_wma_for_forecast_days)
 	dataset = concat_no_target_dataset_with_targets_list(no_target_dataset, target_quote_list)
 	dataset_train, dataset_test = split_train_and_test_dataset(dataset, test_set_size_ratio)
+	dataset_train = remove_intersected_rows_in_train_dataset(dataset_train, forecast_days)
 	print("_" * 80)
-
-	if apply_flip_augmentation:
-		all_quotes_values_list_flipped = flip_all_quotes_values_list(all_quotes_values_list)
-		no_target_dataset_flipped = generate_no_target_dataset_from_quotes_values_list(all_quotes_values_list_flipped, number_of_candles, sma_lengths_list)
-		print("Target quote:", target_quote_with_source[0], "(" + str(target_quote_with_source[1]) + ")")
-		target_quote_list_flipped = get_flipped_target_quote_list(target_quote_with_source[0], target_quote_with_source[1], start_time, end_time, forecast_days, number_of_candles, use_wma_for_forecast_days)
-		dataset_flipped = concat_no_target_dataset_with_targets_list(no_target_dataset_flipped, target_quote_list_flipped)
-		dataset_train_flipped, dataset_test_flipped = split_train_and_test_dataset(dataset_flipped, test_set_size_ratio)
-		dataset_train = concat_datasets(dataset_train, dataset_train_flipped)
-		print("Flip augmentation applied")
-		print("_" * 80)
 	
 	if apply_noise_augmentation:
 		dataset_train = add_noise_to_dataset(dataset_train, augmentation_noise_sigma, train_dataset_new_size_coefficient)
@@ -280,7 +245,6 @@ def main():
 					 config.APPLY_NOISE_AUGMENTATION,
 					 config.AUGMENTATION_NOISE_INTERVAL,
 					 config.TRAIN_DATASET_NEW_SIZE_COEFFICIENT,
-					 config.APPLY_FLIP_AUGMENTATION,
 					 config.USE_WMA_FOR_FORECAST_DAYS)
 
 
