@@ -101,20 +101,22 @@ def get_target_quote_list(quote, column_name, start_time, end_time, forecast_day
 	df = nasdaqdatalink.get(quote, start_date=start_time, end_date=end_time)
 	df = df.reset_index()
 	target_list = []
-	last_close_prices = []
+	close_prices = []
 	for index, row in df.iterrows():
-		if index >= number_of_candles:
+		close_prices.append(float(row[column_name]))
+	for i in range(len(close_prices)):
+		if index >= number_of_candles - 1 and i + 1 + forecast_days < len(close_prices):
 			if use_wma_for_forecast_days:
-				if float(row[column_name]) >= indicators.get_wma(last_close_prices[-forecast_days:]):
+				if close_prices[i] <= indicators.get_wma(close_prices[i + 1:i + 1 + forecast_days]):
 					target_list.append(1)
 				else:
 					target_list.append(0)
 			else:
-				if float(row[column_name]) >= last_close_prices[-forecast_days]:
+				if close_prices[i] <= close_prices[i + forecast_days]:
 					target_list.append(1)
 				else:
 					target_list.append(0)
-		last_close_prices.append(float(row[column_name]))
+		close_prices.append(float(row[column_name]))
 	return target_list
 
 
@@ -208,7 +210,7 @@ def remove_intersected_rows_in_train_dataset(dataset_train, forecast_days):
 def generate_dataset(quotes_list, target_quote_with_source, start_time, end_time, forecast_days, number_of_candles, train_csv_file_path, test_csv_file_path, pred_csv_file_path, csv_delimiter, test_set_size_ratio, sma_lengths_list, apply_noise_augmentation, augmentation_noise_sigma, train_dataset_new_size_coefficient, use_wma_for_forecast_days):
 	all_quotes_values_list = get_values_for_quotes_list(quotes_list, start_time, end_time, forecast_days)
 	no_target_dataset = generate_no_target_dataset_from_quotes_values_list(all_quotes_values_list, number_of_candles, sma_lengths_list)
-	dataset_pred = no_target_dataset.copy()[-10:]
+	dataset_pred = no_target_dataset.copy()[-60:]
 	print("Target quote:", target_quote_with_source[0], "(" + str(target_quote_with_source[1]) + ")")
 	target_quote_list = get_target_quote_list(target_quote_with_source[0], target_quote_with_source[1], start_time, end_time, forecast_days, number_of_candles, use_wma_for_forecast_days)
 	dataset = concat_no_target_dataset_with_targets_list(no_target_dataset, target_quote_list)
