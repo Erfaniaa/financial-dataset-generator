@@ -97,15 +97,19 @@ def get_values_for_quotes_list(quotes_with_column_name_list, start_time, end_tim
 	return all_quotes_values_list
 
 
-def get_target_quote_list(quote, column_name, start_time, end_time, forecast_days, number_of_candles, use_wma_for_forecast_days):
-	df = nasdaqdatalink.get(quote, start_date=start_time, end_date=end_time)
+def get_target_quote_list(quote, column_name, data_source, start_time, end_time, forecast_days, number_of_candles, use_wma_for_forecast_days):
+	if data_source == "nasdaq-data-link":
+		df = nasdaqdatalink.get(quote, start_date=start_time, end_date=end_time)
+	elif data_source == "yfinance":
+		df = yfinance.download(quote, start=get_next_day_string(start_time), end=get_next_day_string(end_time), interval="1d", auto_adjust=True, prepost=True, threads=True)
 	df = df.reset_index()
+	df = remove_extra_data(df, start_time, end_time)
 	target_list = []
 	close_prices = []
 	for index, row in df.iterrows():
 		close_prices.append(float(row[column_name]))
 	for i in range(len(close_prices)):
-		if index >= number_of_candles - 1 and i + 1 + forecast_days < len(close_prices):
+		if i >= number_of_candles - 1 and i + 1 + forecast_days <= len(close_prices):
 			if use_wma_for_forecast_days:
 				if close_prices[i] <= indicators.get_wma(close_prices[i + 1:i + 1 + forecast_days]):
 					target_list.append(1)
@@ -212,7 +216,7 @@ def generate_dataset(quotes_list, target_quote_with_source, start_time, end_time
 	no_target_dataset = generate_no_target_dataset_from_quotes_values_list(all_quotes_values_list, number_of_candles, sma_lengths_list)
 	dataset_pred = no_target_dataset.copy()[-60:]
 	print("Target quote:", target_quote_with_source[0], "(" + str(target_quote_with_source[1]) + ")")
-	target_quote_list = get_target_quote_list(target_quote_with_source[0], target_quote_with_source[1], start_time, end_time, forecast_days, number_of_candles, use_wma_for_forecast_days)
+	target_quote_list = get_target_quote_list(target_quote_with_source[0], target_quote_with_source[1], target_quote_with_source[2], start_time, end_time, forecast_days, number_of_candles, use_wma_for_forecast_days)
 	dataset = concat_no_target_dataset_with_targets_list(no_target_dataset, target_quote_list)
 	dataset_train, dataset_test = split_train_and_test_dataset(dataset, test_set_size_ratio)
 	dataset_train = remove_intersected_rows_in_train_dataset(dataset_train, forecast_days)
