@@ -203,10 +203,10 @@ def concat_datasets(dataset1, dataset2):
 	return ret
 
 
-def remove_intersected_rows_in_train_dataset(dataset_train, forecast_days):
+def remove_intersected_rows_in_train_dataset(dataset_train, number_of_candles, forecast_days):
 	ret = []
 	for i in range(len(dataset_train)):
-		if i % forecast_days == 0:
+		if i % (number_of_candles + forecast_days) == 0:
 			ret.append(dataset_train[i])
 	return ret
 
@@ -219,7 +219,7 @@ def generate_dataset(quotes_list, target_quote_with_source, start_time, end_time
 	target_quote_list = get_target_quote_list(target_quote_with_source[0], target_quote_with_source[1], target_quote_with_source[2], start_time, end_time, forecast_days, number_of_candles, use_wma_for_forecast_days)
 	dataset = concat_no_target_dataset_with_targets_list(no_target_dataset, target_quote_list)
 	dataset_train, dataset_test = split_train_and_test_dataset(dataset, test_set_size_ratio)
-	dataset_train = remove_intersected_rows_in_train_dataset(dataset_train, forecast_days)
+	dataset_train = remove_intersected_rows_in_train_dataset(dataset_train, number_of_candles, forecast_days)
 	print("_" * 80)
 	
 	if apply_noise_augmentation:
