@@ -28,8 +28,8 @@ For the configuration, you can:
 
 ## Config.py Description
 
-- `QUOTES_LIST_WITH_SOURCE`: What's your machine learning model input?
-- `TARGET_QUOTE_WITH_SOURCE`: What's your machine learning model output? 
+- `PAIR_NAMES_LIST_WITH_SOURCE`: What's your machine learning model input?
+- `TARGET_PAIR_NAME_WITH_SOURCE`: What's your machine learning model output? 
 - `SMA_LENGTHS_LIST`: Do you want to generate a dataset with some moving averages?
 - `APPLY_FLIP_AUGMENTATION` and `APPLY_NOISE_AUGMENTATION`: Using data augmentations
 - `AUGMENTATION_NOISE_INTERVAL`: Set the amount of augmentation noise

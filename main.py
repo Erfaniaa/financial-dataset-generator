@@ -66,11 +66,11 @@ def remove_extra_data(df, start_time, end_time):
 	return df
 
 
-def get_data_for_quote(quote, column_name, data_source, start_time, end_time, forecast_days):
+def get_data_for_pair_name(pair_name, column_name, data_source, start_time, end_time, forecast_days):
 	if data_source == "nasdaq-data-link":
-		df = nasdaqdatalink.get(quote, start_date=start_time, end_date=end_time)
+		df = nasdaqdatalink.get(pair_name, start_date=start_time, end_date=end_time)
 	elif data_source == "yfinance":
-		df = yfinance.download(quote, start=get_next_day_string(start_time), end=get_next_day_string(end_time), interval="1d", auto_adjust=True, prepost=True, threads=True)
+		df = yfinance.download(pair_name, start=get_next_day_string(start_time), end=get_next_day_string(end_time), interval="1d", auto_adjust=True, prepost=True, threads=True)
 	df = df.reset_index()
 	df = df[['Date', column_name]]
 	df = df.rename(columns={column_name: "Value"})
@@ -81,11 +81,11 @@ def get_values_list_from_dataframe(df):
 	return df["Value"].tolist()
 
 
-def get_values_for_quotes_list(quotes_with_column_name_list, start_time, end_time, forecast_days):
-	all_quotes_values_list = []
-	for quote, column_name, data_source in quotes_with_column_name_list:
-		print("Quote:", quote, "(" + str(column_name) + ", " + str(data_source) + ")")
-		df = get_data_for_quote(quote, column_name, data_source, start_time, end_time, forecast_days)
+def get_values_for_pair_names_list(pair_names_with_column_name_list, start_time, end_time, forecast_days):
+	all_pair_names_values_list = []
+	for pair_name, column_name, data_source in pair_names_with_column_name_list:
+		print("Quote:", pair_name, "(" + str(column_name) + ", " + str(data_source) + ")")
+		df = get_data_for_pair_name(pair_name, column_name, data_source, start_time, end_time, forecast_days)
 		print("Data downloaded")
 		df = remove_extra_data(df, start_time, end_time)
 		print("Extra data removed")
@@ -93,15 +93,15 @@ def get_values_for_quotes_list(quotes_with_column_name_list, start_time, end_tim
 		print("Missing data filled")
 		values_list = get_values_list_from_dataframe(df)
 		print("_" * 80)
-		all_quotes_values_list.append(values_list)
-	return all_quotes_values_list
+		all_pair_names_values_list.append(values_list)
+	return all_pair_names_values_list
 
 
-def get_target_quote_list(quote, column_name, data_source, start_time, end_time, forecast_days, number_of_candles, use_wma_for_forecast_days):
+def get_target_pair_name_list(pair_name, column_name, data_source, start_time, end_time, forecast_days, number_of_candles, use_wma_for_forecast_days):
 	if data_source == "nasdaq-data-link":
-		df = nasdaqdatalink.get(quote, start_date=start_time, end_date=end_time)
+		df = nasdaqdatalink.get(pair_name, start_date=start_time, end_date=end_time)
 	elif data_source == "yfinance":
-		df = yfinance.download(quote, start=get_next_day_string(start_time), end=get_next_day_string(end_time), interval="1d", auto_adjust=True, prepost=True, threads=True)
+		df = yfinance.download(pair_name, start=get_next_day_string(start_time), end=get_next_day_string(end_time), interval="1d", auto_adjust=True, prepost=True, threads=True)
 	df = df.reset_index()
 	df = remove_extra_data(df, start_time, end_time)
 	target_list = []
@@ -131,12 +131,12 @@ def concat_no_target_dataset_with_targets_list(no_target_dataset, targets_list):
 	return dataset
 
 
-def generate_no_target_dataset_from_quotes_values_list(quotes_values_list, number_of_candles, sma_lengths_list):
+def generate_no_target_dataset_from_pair_names_values_list(pair_names_values_list, number_of_candles, sma_lengths_list):
 	no_target_dataset = []
-	for i in range(len(quotes_values_list[0]) - number_of_candles):
+	for i in range(len(pair_names_values_list[0]) - number_of_candles):
 		no_target_dataset_row = []
-		for j in range(len(quotes_values_list)):
-			current_values = quotes_values_list[j][i:i + number_of_candles]
+		for j in range(len(pair_names_values_list)):
+			current_values = pair_names_values_list[j][i:i + number_of_candles]
 			no_target_dataset_row.extend(current_values)
 			for k in range(len(sma_lengths_list)):
 				sma_list = [indicators.get_average(current_values[t - sma_lengths_list[k]:t]) for t in range(sma_lengths_list[k], len(current_values))]
@@ -211,13 +211,13 @@ def remove_intersected_rows_in_train_dataset(dataset_train, number_of_candles, f
 	return ret
 
 
-def generate_dataset(quotes_list, target_quote_with_source, start_time, end_time, forecast_days, number_of_candles, train_csv_file_path, test_csv_file_path, pred_csv_file_path, csv_delimiter, test_set_size_ratio, sma_lengths_list, apply_noise_augmentation, augmentation_noise_sigma, train_dataset_new_size_coefficient, use_wma_for_forecast_days):
-	all_quotes_values_list = get_values_for_quotes_list(quotes_list, start_time, end_time, forecast_days)
-	no_target_dataset = generate_no_target_dataset_from_quotes_values_list(all_quotes_values_list, number_of_candles, sma_lengths_list)
+def generate_dataset(pair_names_list, target_pair_name_with_source, start_time, end_time, forecast_days, number_of_candles, train_csv_file_path, test_csv_file_path, pred_csv_file_path, csv_delimiter, test_set_size_ratio, sma_lengths_list, apply_noise_augmentation, augmentation_noise_sigma, train_dataset_new_size_coefficient, use_wma_for_forecast_days):
+	all_pair_names_values_list = get_values_for_pair_names_list(pair_names_list, start_time, end_time, forecast_days)
+	no_target_dataset = generate_no_target_dataset_from_pair_names_values_list(all_pair_names_values_list, number_of_candles, sma_lengths_list)
 	dataset_pred = no_target_dataset.copy()[-60:]
-	print("Target quote:", target_quote_with_source[0], "(" + str(target_quote_with_source[1]) + ")")
-	target_quote_list = get_target_quote_list(target_quote_with_source[0], target_quote_with_source[1], target_quote_with_source[2], start_time, end_time, forecast_days, number_of_candles, use_wma_for_forecast_days)
-	dataset = concat_no_target_dataset_with_targets_list(no_target_dataset, target_quote_list)
+	print("Target pair_name:", target_pair_name_with_source[0], "(" + str(target_pair_name_with_source[1]) + ")")
+	target_pair_name_list = get_target_pair_name_list(target_pair_name_with_source[0], target_pair_name_with_source[1], target_pair_name_with_source[2], start_time, end_time, forecast_days, number_of_candles, use_wma_for_forecast_days)
+	dataset = concat_no_target_dataset_with_targets_list(no_target_dataset, target_pair_name_list)
 	dataset_train, dataset_test = split_train_and_test_dataset(dataset, test_set_size_ratio)
 	dataset_train = remove_intersected_rows_in_train_dataset(dataset_train, number_of_candles, forecast_days)
 	print("_" * 80)
@@ -236,8 +236,8 @@ def read_api_key(api_key_file_path):
 
 def main():
 	read_api_key(config.API_KEY_FILE_PATH)
-	generate_dataset(config.QUOTES_LIST_WITH_SOURCE,
-					 config.TARGET_QUOTE_WITH_SOURCE,
+	generate_dataset(config.PAIR_NAMES_LIST_WITH_SOURCE,
+					 config.TARGET_PAIR_NAME_WITH_SOURCE,
 					 config.START_TIME,
 					 config.END_TIME,
 					 config.FORECAST_DAYS,
