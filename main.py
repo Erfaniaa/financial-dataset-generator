@@ -1,4 +1,3 @@
-from tracemalloc import start
 import config
 import indicators
 
